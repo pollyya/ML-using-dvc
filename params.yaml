@@ -1,0 +1,9 @@
+model:
+  batch_size: 32
+  seed: 42
+
+train_and_eval:
+  learning_rate: 0.001
+  epochs: 5
+  seed: 42
+
