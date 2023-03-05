@@ -98,7 +98,7 @@ model.to(device)
 
 #функция потерь и оптимизатор
 loss_fn = nn.CrossEntropyLoss() #кросс-энтропия, с отрицательными логарифмами вероятности
-optimizer = torch.optim.Adam(model.parameters(), LR=learning_rate) #метод стохастической оптимизации, lr-скорость обучения(по умолчанию)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) #метод стохастической оптимизации, lr-скорость обучения(по умолчанию)
 
 # создание пустого словаря результатов
 results = {"train_loss": [], "train_acc": [], "train_time":[], "train_time_per_epoch":[],
