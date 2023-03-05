@@ -92,7 +92,7 @@ def test_step(model: torch.nn.Module,
     return test_loss, test_acc
 
 # загрузка модели
-model = torch.load(os.path.join("drive/My Drive/DVC/", 'model.h5'))
+model = torch.load('model.pt')
 # перемещение на девайс
 model.to(device)
 
