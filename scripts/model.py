@@ -15,7 +15,7 @@ seed = params["seed"]
 
 #импорт модели и предобученных на ImageNet весов
 weights = torchvision.models.MobileNet_V2_Weights.DEFAULT
-model = torchvision.models.mobilenet_v2(weights=weights).to(device)
+model = torchvision.models.mobilenet_v2(weights=weights)
 
 #преобразования изображений, использовавшиеся для обучения сети
 auto_transforms = weights.transforms()
