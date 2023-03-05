@@ -74,4 +74,4 @@ model.classifier = torch.nn.Sequential(
                     out_features=len(class_names),
                     bias=True))
 # сохранение модели
-model.save(os.path.join("drive/My Drive/DVC/", 'model.h5'))
+torch.save(model, 'model.pt')
