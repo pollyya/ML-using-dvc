@@ -7,6 +7,8 @@ import torch
 from torch import nn
 from typing import Dict, List, Tuple
 import os
+import pandas as pd
+
 
 # настройка среды выполнения
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -100,13 +102,16 @@ model.to(device)
 loss_fn = nn.CrossEntropyLoss() #кросс-энтропия, с отрицательными логарифмами вероятности
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) #метод стохастической оптимизации, lr-скорость обучения(по умолчанию)
 
-# создание пустого словаря результатов
-results = {"train_loss": [], "train_acc": [], "train_time":[], "train_time_per_epoch":[],
-    "test_loss": [], "test_acc": [], "test_time":[], "test_time_per_epoch":[]}
-
 # для подсчета времени
 train_time = 0
 test_time = 0
+
+epochs_list = []
+train_acc_list = []
+test_acc_list = []
+test_loss_list = []
+train_loss_list = []
+epoch_num = 0
 
 train_data_loader = 'train_data_loader.pkl'
 test_data_loader = 'test_data_loader.pkl'
@@ -120,8 +125,10 @@ with open(train_data_loader, 'rb') as f:
 with open(test_data_loader, 'rb') as f:
     test_dataloader = pickle.load(f)
 
+
 # цикл по этапам обучения и тестирования для заданного числа эпох
 for epoch in tqdm(range(epochs)):
+
     start_time = timer()
     train_loss, train_acc = train_step(model=model,
                                         dataloader=train_dataloader,
@@ -141,6 +148,7 @@ for epoch in tqdm(range(epochs)):
     end_time = timer()
     test_time_per_epoch = end_time - start_time
     test_time += test_time_per_epoch
+    epoch_num +=1
     # Вывод данных об обучении
     print(f"Epoch: {epoch + 1} | "
           f"train_loss: {train_loss:.4f} | "
@@ -150,21 +158,36 @@ for epoch in tqdm(range(epochs)):
           f"test_acc: {test_acc:.4f} | "
           f"test_time: {test_time_per_epoch:.3f}")
 
-
     # Добавление в результаты
-    results["train_loss"].append(train_loss)
-    results["train_acc"].append(train_acc)
-    results["train_time_per_epoch"].append(train_time_per_epoch)
-    results["test_loss"].append(test_loss)
-    results["test_acc"].append(test_acc)
-    results["test_time_per_epoch"].append(test_time_per_epoch)
+    epochs_list.append(epoch_num)
+    train_acc_list.append(train_acc)
+    train_loss_list.append(train_loss)
+    test_acc_list.append(test_acc)
+    test_loss_list.append(test_loss)
 
-results["train_time"].append(train_time)
-results["test_time"].append(test_time)
+test_time_per_epoch_av = test_time/epochs
+train_time_per_epoch_av = train_time/epochs
 
 # вывод информации  времени обучения
-time_total = results["train_time"][0] + results["test_time"][0]
+time_total = train_time + test_time
 print(f"[INFO] Total training time: {time_total:.3f} seconds")
+
+results_dict = {'Epoch': epochs_list, 'train_loss': train_loss_list,
+         'train_accuracy': train_acc_list, 'test_loss': test_loss_list,
+         'test_accuracy': test_acc_list} 
+
+df = pd.DataFrame(results_dict)
+
+df.to_csv ('results.csv', index=False )
+
+results = { "train_loss": train_loss, 
+           "train_acc":  train_acc, 
+            "train_time": round(train_time, 3),
+            "train_time_per_epoch": train_time_per_epoch_av,
+            "test_loss": test_loss, 
+            "test_acc": test_acc, 
+            "test_time": round(test_time, 3),
+            "test_time_per_epoch": test_time_per_epoch_av}
 
 with open(metrics, 'w') as f:
     json_metrics = json.dump(results, f, indent=4)
