@@ -29,6 +29,9 @@ def train_step(model: torch.nn.Module,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                device: torch.device) -> Tuple[float, float]:
+
+    #замер времени выполнения эпох
+    train_time_per_epoch = 0 
     # режим обучения
     model.train()
 
@@ -39,6 +42,8 @@ def train_step(model: torch.nn.Module,
     for batch, (X, y) in enumerate(dataloader):
         # Перемещение данных на  девайс
         X, y = X.to(device), y.to(device)
+
+        start_time = timer()
 
         y_pred = model(X)
         # Подсчет потерь
@@ -51,6 +56,9 @@ def train_step(model: torch.nn.Module,
         # функция оптимизатора для обновления параметров
         optimizer.step()
 
+        end_time = timer()
+        train_time_per_epoch += (end_time - start_time)
+
         # Расчет и сложение метрик
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
         train_acc += (y_pred_class == y).sum().item() / len(y_pred)
@@ -58,13 +66,16 @@ def train_step(model: torch.nn.Module,
     # Получение средних значений метрик
     train_loss = train_loss / len(dataloader)
     train_acc = train_acc / len(dataloader)
-    return train_loss, train_acc
+    return train_loss, train_acc, train_time_per_epoch
 
 
 def test_step(model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
               device: torch.device) -> Tuple[float, float]:
+    
+    #замер времени выполнения эпох
+    test_time_per_epoch = 0
     # режим оценки
     model.eval()
 
@@ -77,12 +88,17 @@ def test_step(model: torch.nn.Module,
         for batch, (X, y) in enumerate(dataloader):
             # Перенос данных на выбранное устройство
             X, y = X.to(device), y.to(device)
-
+            
+            start_time = timer()
+  
             test_pred_logits = model(X)
 
             # Подсчет потерь
             loss = loss_fn(test_pred_logits, y)
             test_loss += loss.item()
+
+            end_time = timer()
+            test_time_per_epoch += (end_time - start_time)
 
             # Расчет и сложение метрик
             test_pred_labels = test_pred_logits.argmax(dim=1)
@@ -91,7 +107,7 @@ def test_step(model: torch.nn.Module,
     # Расчет средних значений метрик
     test_loss = test_loss / len(dataloader)
     test_acc = test_acc / len(dataloader)
-    return test_loss, test_acc
+    return test_loss, test_acc, test_time_per_epoch
 
 # загрузка модели
 model = torch.load('model.pt')
@@ -128,25 +144,18 @@ with open(test_data_loader, 'rb') as f:
 
 # цикл по этапам обучения и тестирования для заданного числа эпох
 for epoch in tqdm(range(epochs)):
-
-    start_time = timer()
-    train_loss, train_acc = train_step(model=model,
-                                        dataloader=train_dataloader,
-                                        loss_fn=loss_fn,
-                                        optimizer=optimizer,
-                                        device=device)
-    end_time = timer()
-    train_time_per_epoch = end_time - start_time
+    train_loss, train_acc, train_time_per_epoch = train_step(model=model,
+                                                  dataloader=train_dataloader,
+                                                  loss_fn=loss_fn,
+                                                  optimizer=optimizer,
+                                                  device=device)
     train_time += train_time_per_epoch
 
-    start_time = timer()
-    test_loss, test_acc = test_step(model=model,
-                                    dataloader=test_dataloader,
-                                    loss_fn=loss_fn,
-                                    device=device)
+    test_loss, test_acc, test_time_per_epoch = test_step(model=model,
+                                               dataloader=test_dataloader,
+                                               loss_fn=loss_fn,
+                                               device=device)
 
-    end_time = timer()
-    test_time_per_epoch = end_time - start_time
     test_time += test_time_per_epoch
     epoch_num +=1
     # Вывод данных об обучении
