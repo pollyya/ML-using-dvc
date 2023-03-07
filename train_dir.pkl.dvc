@@ -1,0 +1,4 @@
+outs:
+- md5: 9a38594ec0c37c768ea2b76f9636d4e6
+  size: 119
+  path: train_dir.pkl

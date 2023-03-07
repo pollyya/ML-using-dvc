@@ -1,0 +1,26 @@
+stages:
+  model:
+    cmd: python /content/ML-using-dvc/scripts/model.py
+    deps:
+    - scripts/model.py
+    - test_dir.pkl
+    - train_dir.pkl
+    params:
+    - params.yaml:
+    outs:
+    - model.pt
+    - test_data_loader.pkl
+    - train_data_loader.pkl
+  train_and_eval:
+    cmd: python /content/ML-using-dvc/scripts/train_and_eval.py
+    deps:
+    - model.pt
+    - scripts/train_and_eval.py
+    - test_data_loader.pkl
+    - train_data_loader.pkl
+    params:
+    - params.yaml:
+    outs:
+    - results.csv
+    metrics:
+    - metrics.json

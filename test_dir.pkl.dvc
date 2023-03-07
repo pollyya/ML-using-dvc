@@ -1,0 +1,4 @@
+outs:
+- md5: f2f8e384eea95c6759014137838b2ba4
+  size: 115
+  path: test_dir.pkl
