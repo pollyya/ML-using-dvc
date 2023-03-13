@@ -1,0 +1,9 @@
+{
+    "train_loss": 0.11353655525993916,
+    "train_acc": 0.9596774193548387,
+    "train_time": 15.046,
+    "train_time_per_epoch": 3.009,
+    "inference_accuracy": 0.9773185483870968,
+    "inference time": 34.804,
+    "inference_time_per_batch": 0.561
+}
