@@ -8,7 +8,9 @@ from torch import nn
 from typing import Dict, List, Tuple
 import os
 import pandas as pd
-
+import numpy as np
+import onnx 
+import onnxruntime as ort
 
 # настройка среды выполнения
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -68,47 +70,6 @@ def train_step(model: torch.nn.Module,
     train_acc = train_acc / len(dataloader)
     return train_loss, train_acc, train_time_per_epoch
 
-
-def test_step(model: torch.nn.Module,
-              dataloader: torch.utils.data.DataLoader,
-              loss_fn: torch.nn.Module,
-              device: torch.device) -> Tuple[float, float]:
-    
-    #замер времени выполнения эпох
-    test_time_per_epoch = 0
-    # режим оценки
-    model.eval()
-
-    # Начальные значения для функции потерь и точности
-    test_loss, test_acc = 0, 0
-
-    # включение режима вывода
-    with torch.inference_mode():
-        # Цикл по всем пакетам(выборкам)
-        for batch, (X, y) in enumerate(dataloader):
-            # Перенос данных на выбранное устройство
-            X, y = X.to(device), y.to(device)
-            
-            start_time = timer()
-  
-            test_pred_logits = model(X)
-
-            # Подсчет потерь
-            loss = loss_fn(test_pred_logits, y)
-            test_loss += loss.item()
-
-            end_time = timer()
-            test_time_per_epoch += (end_time - start_time)
-
-            # Расчет и сложение метрик
-            test_pred_labels = test_pred_logits.argmax(dim=1)
-            test_acc += ((test_pred_labels == y).sum().item() / len(test_pred_labels))
-
-    # Расчет средних значений метрик
-    test_loss = test_loss / len(dataloader)
-    test_acc = test_acc / len(dataloader)
-    return test_loss, test_acc, test_time_per_epoch
-
 # загрузка модели
 model = torch.load('model.pt')
 # перемещение на девайс
@@ -120,12 +81,9 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) #метод �
 
 # для подсчета времени
 train_time = 0
-test_time = 0
 
 epochs_list = []
 train_acc_list = []
-test_acc_list = []
-test_loss_list = []
 train_loss_list = []
 epoch_num = 0
 
@@ -142,7 +100,7 @@ with open(test_data_loader, 'rb') as f:
     test_dataloader = pickle.load(f)
 
 
-# цикл по этапам обучения и тестирования для заданного числа эпох
+# обучение
 for epoch in tqdm(range(epochs)):
     train_loss, train_acc, train_time_per_epoch = train_step(model=model,
                                                   dataloader=train_dataloader,
@@ -151,52 +109,78 @@ for epoch in tqdm(range(epochs)):
                                                   device=device)
     train_time += train_time_per_epoch
 
-    test_loss, test_acc, test_time_per_epoch = test_step(model=model,
-                                               dataloader=test_dataloader,
-                                               loss_fn=loss_fn,
-                                               device=device)
-
-    test_time += test_time_per_epoch
     epoch_num +=1
     # Вывод данных об обучении
     print(f"Epoch: {epoch + 1} | "
           f"train_loss: {train_loss:.4f} | "
           f"train_acc: {train_acc:.4f} | "
-          f"train_time: {train_time_per_epoch:.3f} | "
-          f"test_loss: {test_loss:.4f} | "
-          f"test_acc: {test_acc:.4f} | "
-          f"test_time: {test_time_per_epoch:.3f}")
-
+          f"train_time: {train_time_per_epoch:.3f} | ")
+  
     # Добавление в результаты
     epochs_list.append(epoch_num)
     train_acc_list.append(train_acc)
     train_loss_list.append(train_loss)
-    test_acc_list.append(test_acc)
-    test_loss_list.append(test_loss)
-
-test_time_per_epoch_av = test_time/epochs
+    
 train_time_per_epoch_av = train_time/epochs
 
 # вывод информации  времени обучения
-time_total = train_time + test_time
-print(f"[INFO] Total training time: {time_total:.3f} seconds")
+print(f"[INFO] Total training time: {train_time:.3f} seconds")
+
+sample_input = torch.randn(32, 3, 224, 224).to(device)
+
+model.eval()
+
+torch.onnx.export(
+    model,                  
+    sample_input,                    
+    "onnx_model.onnx", 
+    verbose = False, 
+    export_params=True,        
+    opset_version=12,       
+    input_names = ['input'],    
+    output_names = ['output'])
+
+onnx_model = onnx.load("onnx_model.onnx")
+ort_session = ort.InferenceSession("onnx_model.onnx")
+
+correct_preds = 0
+total = 0
+inference_time = 0
+inference_time_per_batch = 0
+for data in test_dataloader:
+    images, labels = data[0], np.array(data[1]) 
+    start_time = timer()
+    outputs = ort_session.run(
+        None,
+        {'input': images.numpy()}
+    )
+    end_time = timer()
+    inference_time += (end_time - start_time)
+    res = np.array(np.argmax(outputs, axis=2))[0]
+    total += labels.shape[0]
+    correct_preds += (res == labels).sum().item()
+
+inference_time_per_batch = inference_time / len(test_dataloader)
+inference_accuracy = correct_preds / total
+
+print(f"inference_time: {inference_time:.4f} | "
+      f"inference_time_per_batch : {inference_time_per_batch :.4f} | "
+      f"inference_accuracy: {inference_accuracy:.3f} | ")
 
 results_dict = {'Epoch': epochs_list, 'train_loss': train_loss_list,
-         'train_accuracy': train_acc_list, 'test_loss': test_loss_list,
-         'test_accuracy': test_acc_list} 
+                'train_accuracy': train_acc_list, 'inference accuracy': inference_accuracy } 
 
 df = pd.DataFrame(results_dict)
 
 df.to_csv ('results.csv', index=False )
 
-results = { "train_loss": train_loss, 
+results = {"train_loss": train_loss, 
            "train_acc":  train_acc, 
-            "train_time": round(train_time, 3),
-            "train_time_per_epoch": train_time_per_epoch_av,
-            "test_loss": test_loss, 
-            "test_acc": test_acc, 
-            "test_time": round(test_time, 3),
-            "test_time_per_epoch": test_time_per_epoch_av}
+           "train_time": round(train_time, 3),
+           "train_time_per_epoch": round(train_time_per_epoch_av, 3),
+           "inference_accuracy": inference_accuracy,
+           "inference time": round(inference_time, 3),
+           "inference_time_per_batch": round(inference_time_per_batch, 3)}
 
 with open(metrics, 'w') as f:
     json_metrics = json.dump(results, f, indent=4)

@@ -42,13 +42,15 @@ train_dataloader = DataLoader(dataset=train_data,
                               batch_size=batch_size, # число выборок
                               num_workers=1, #число подпроцессов, используемых для загрузки данных
                               shuffle=True, #перемешивание данных в каждую итерацию обучения
-                              pin_memory=True)  #копирование тензоров в выбранный девайс
+                              pin_memory=True,  #копирование тензоров в выбранный девайс
+                              drop_last=True)
 
 test_dataloader = DataLoader(dataset=test_data,
                              batch_size=batch_size,
                              num_workers=1,
                              shuffle=False,
-                             pin_memory=True)
+                             pin_memory=True,
+                             drop_last=True)
 
 # cохранение путей к данным
 train_data_loader = 'train_data_loader.pkl'

@@ -1,0 +1,67 @@
+schema: '2.0'
+stages:
+  model:
+    cmd: python /content/ML-using-dvc/scripts/model.py
+    deps:
+    - path: scripts/model.py
+      md5: 876a8f7fd5f3e60a8da872cbe64f592b
+      size: 3356
+    - path: test_dir.pkl
+      md5: f2f8e384eea95c6759014137838b2ba4
+      size: 115
+    - path: train_dir.pkl
+      md5: 9a38594ec0c37c768ea2b76f9636d4e6
+      size: 119
+    params:
+      params.yaml:
+        model:
+          batch_size: 32
+          seed: 42
+        train_and_eval:
+          learning_rate: 0.001
+          epochs: 5
+          seed: 42
+    outs:
+    - path: model.pt
+      md5: 1b83d0d2c4ece28c110def48956b5e22
+      size: 9154709
+    - path: test_data_loader.pkl
+      md5: 727311a9e2c5bd43cae03d23e24ed18a
+      size: 177461
+    - path: train_data_loader.pkl
+      md5: 0e9c5d1a385258bc1490fb9d92476c32
+      size: 177495
+  train_and_eval:
+    cmd: python /content/ML-using-dvc/scripts/train_and_eval.py
+    deps:
+    - path: model.pt
+      md5: 1b83d0d2c4ece28c110def48956b5e22
+      size: 9154709
+    - path: scripts/train_and_eval.py
+      md5: 9adc0c259fb577dcd212b92566ecf252
+      size: 6731
+    - path: test_data_loader.pkl
+      md5: 727311a9e2c5bd43cae03d23e24ed18a
+      size: 177461
+    - path: train_data_loader.pkl
+      md5: 0e9c5d1a385258bc1490fb9d92476c32
+      size: 177495
+    params:
+      params.yaml:
+        model:
+          batch_size: 32
+          seed: 42
+        train_and_eval:
+          learning_rate: 0.001
+          epochs: 5
+          seed: 42
+    outs:
+    - path: metrics.json
+      md5: e4ce90c69440d3563053ecf4a7158eec
+      size: 254
+    - path: onnx_model.onnx
+      md5: f109cc1c9c935dd0fbce81f948916f11
+      size: 8878501
+    - path: results.csv
+      md5: 3db834cf7444387edeb5cac9e39bf212
+      size: 350
