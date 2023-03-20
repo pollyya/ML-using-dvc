@@ -1,10 +1,10 @@
 {
     "train_loss": 0.11974603032308911,
     "train_acc": 0.9613095238095238,
-    "train_time": 15.276,
-    "train_time_per_epoch": 3.055274846600514,
+    "train_time": 15.36,
+    "train_time_per_epoch": 3.0720245313998022,
     "test_loss": 0.08213610817042608,
     "test_acc": 0.9816468253968254,
-    "test_time": 11.409,
-    "test_time_per_epoch": 2.28171211780018
+    "test_time": 11.454,
+    "test_time_per_epoch": 2.2907696587997632
 }
